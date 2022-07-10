@@ -1,0 +1,38 @@
+{
+    "name": "wgirhad/geo-squeeze",
+    "description": "Lossy compression for geolocation data, like maps or routes",
+    "type": "library",
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "phpstan/phpstan": "^1.8",
+        "squizlabs/php_codesniffer": "^3.7"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "GeoSqueeze\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Willian Girhad",
+            "email": "willianmonts@gmail.com"
+        }
+    ],
+    "require": {
+        "funiq/geophp": "dev-development",
+        "php": "^8.1"
+    },
+    "scripts": {
+        "tests": [
+            "@cs",
+            "@stan",
+            "@unit"
+        ],
+
+        "cs": "phpcs --standard=PSR12 src tests",
+        "cbf": "phpcbf --standard=PSR12 src tests",
+        "stan": "phpstan --no-progress",
+        "unit": "phpunit --testdox tests"
+    }
+}
