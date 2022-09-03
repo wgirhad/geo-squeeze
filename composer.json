@@ -20,7 +20,7 @@
         }
     ],
     "require": {
-        "funiq/geophp": "dev-development",
+        "funiq/geophp": "^2.0.2",
         "php": "^8.1"
     },
     "scripts": {
