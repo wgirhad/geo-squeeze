@@ -15,113 +15,98 @@ final class VertexTest extends TestCase
     /**
      * @dataProvider turnsProvider
      */
-    public function testTurn(float $expect, Line $lineB): void
+    public function testTurn(float $expect, Line $lineA): void
     {
-        $lineA = Line::fromArray([[0.0, -1.0],[0.0, 0.0]]);
+        $lineB = $this->linePointingNorth();
         $vertex = new Vertex($lineA, $lineB);
 
-        $this->assertEqualsWithDelta($expect, $vertex->turn(), 1.0E-9);
+        $this->assertFloat($expect, $vertex->turn());
     }
 
     /**
      * @dataProvider turnsProvider
      */
-    public function testPriority(float $expect_angle, Line $lineB): void
+    public function testPriority(float $turn_angle, Line $lineA): void
     {
-        $lineA = Line::fromArray([[0.0, -1.0],[0.0, 0.0]]);
+        $lineB = $this->linePointingNorth();
         $vertex = new Vertex($lineA, $lineB);
-        $expect = 360.0 - $expect_angle;
 
-        $this->assertEqualsWithDelta($expect, $vertex->priority(), 1.0E-9);
+        // Priority is the inverse of the turn angle
+        $priority = 360.0 - $turn_angle;
+
+        $this->assertFloat($priority, $vertex->priority());
     }
 
     /**
-     * @dataProvider setLineProvider
+     * @dataProvider turnsProvider
      */
-    public function testSetLine(string $before, string $after, float $expectedAfterA): void
+    public function testSetLineA(float $turn_angle, Line $newLine): void
     {
-        $data = $this->turnsProvider();
+        $lineA = $this->linePointingNorth(yTarget: 0.0);
+        $lineB = $this->linePointingNorth(yTarget: 1.0);
 
-        $line = Line::fromArray([[0.0, -1.0],[0.0, 0.0]]);
-        list($expectBefore, $lineBefore) = $data[$before];
-        list($expectAfter, $lineAfter) = $data[$after];
+        $vertex = new Vertex($lineA, $lineB);
 
-        $vertex = new Vertex($line, $lineBefore);
-        $this->assertEqualsWithDelta($expectBefore, $vertex->turn(), 1.0E-9);
+        $vertex->setLineA($newLine);
+        $this->assertFloat($turn_angle, $vertex->turn());
+    }
 
-        $vertex->setLineB($lineAfter);
-        $this->assertEqualsWithDelta($expectAfter, $vertex->turn(), 1.0E-9);
+    /**
+     * @dataProvider turnsProvider
+     */
+    public function testSetLineB(float $turn_angle, Line $newLine): void
+    {
+        list($xTarget, $yTarget) = $newLine->start->asArray();
 
-        $vertex->setLineA(Line::fromArray([[0.0, 1.0],[0.0, 0.0]]));
-        $this->assertEqualsWithDelta($expectedAfterA, $vertex->turn(), 1.0E-9);
+        $lineA = $this->linePointingNorth($xTarget, $yTarget);
+        $lineB = $this->linePointingNorth($xTarget, $yTarget + 1.0);
+
+        $vertex = new Vertex($lineA, $lineB);
+
+        $vertex->setLineB($newLine);
+        $this->assertFloat($turn_angle, $vertex->turn());
     }
 
     public function testLinesDoNotIntersectException(): void
     {
         $this->expectException(LinesDoNotIntersect::class);
-        $lineA = Line::fromArray([[0.0, -1.0], [0.0, 0.0]]);
-        $lineB = Line::fromArray([[0.0, 0.0], [0.0, 1.0]]);
-        $vertex = new Vertex($lineB, $lineA);
+        $lineA = $this->linePointingNorth(yTarget: 1.0);
+        $lineB = $this->linePointingNorth(yTarget: 0.0);
+        $vertex = new Vertex($lineA, $lineB);
     }
 
     public function testPoint(): void
     {
-        $lineA = Line::fromArray([[0.0, -1.0], [0.0, 0.0]]);
-        $lineB = Line::fromArray([[0.0, 0.0], [0.0, 1.0]]);
+        $lineA = $this->linePointingNorth(yTarget: 0.0);
+        $lineB = $this->linePointingNorth(yTarget: 1.0);
         $vertex = new Vertex($lineA, $lineB);
         $this->assertSame($lineA->end, $vertex->point());
     }
 
     public function testDelete(): void
     {
-        $points = [
-            new Point(0, 0),
-            new Point(0, 1),
-            new Point(1, 2),
-            new Point(0, 3),
-            new Point(0, 4),
-        ];
+        // test setup
+        $coordinates = collect([[0, 0], [0, 1], [1, 2], [0, 3], [0, 4]]);
 
-        $lines = [
-            new Line($points[0], $points[1]),
-            new Line($points[1], $points[2]),
-            new Line($points[2], $points[3]),
-            new Line($points[3], $points[4]),
-        ];
+        // PHPStan is ignored here due to bug with callable(mixed $args)
+        $points = $coordinates->mapSpread(fn(int $a, int $b) => new Point($a, $b)); //@phpstan-ignore-line
+        $lines = $points->sliding(2)->mapSpread(fn(Point $a, Point $b) => new Line($a, $b)); //@phpstan-ignore-line
+        $vertices = $lines->sliding(2)->mapSpread(fn(Line $a, Line $b) => new Vertex($a, $b)); //@phpstan-ignore-line
 
-        $vertices = [
-            new Vertex($lines[0], $lines[1]),
-            new Vertex($lines[1], $lines[2]),
-            new Vertex($lines[2], $lines[3]),
-        ];
-
+        // connecting vertices
         $vertices[0]->next = $vertices[1];
         $vertices[1]->next = $vertices[2];
         $vertices[1]->prev = $vertices[0];
         $vertices[2]->prev = $vertices[1];
 
-        $this->assertEqualsWithDelta(45.0, $vertices[0]->turn(), 1.0E-9);
-        $this->assertEqualsWithDelta(270.0, $vertices[1]->turn(), 1.0E-9);
-        $this->assertEqualsWithDelta(315.0, $vertices[2]->turn(), 1.0E-9);
-
         $vertices[1]->delete();
 
+        // asserting vertices updated upon delete
         $this->assertSame($vertices[0]->next, $vertices[2]);
         $this->assertSame($vertices[2]->prev, $vertices[0]);
 
-        $this->assertEqualsWithDelta(0.0, $vertices[0]->turn(), 1.0E-9);
-        $this->assertEqualsWithDelta(0.0, $vertices[2]->turn(), 1.0E-9);
-    }
-
-    /**
-     * @return array<int, array{string, string, float}>
-     */
-    public function setLineProvider(): array
-    {
-        return [
-            ['north', 'northeast', 135.0],
-            ['east', 'south', 0.0],
-        ];
+        $this->assertFloat(0.0, $vertices[0]->turn());
+        $this->assertFloat(0.0, $vertices[2]->turn());
     }
 
     /**
@@ -129,15 +114,52 @@ final class VertexTest extends TestCase
      */
     public function turnsProvider(): array
     {
+        // the expected angle provided expects an initial line pointing northward
         return [
-            'north'     => [0.0,   Line::fromArray([[0.0, 0.0],[0.0, 1.0]])],
-            'northeast' => [45.0,  Line::fromArray([[0.0, 0.0],[1.0, 1.0]])],
-            'east'      => [90.0,  Line::fromArray([[0.0, 0.0],[1.0, 0.0]])],
-            'southeast' => [135.0, Line::fromArray([[0.0, 0.0],[1.0, -1.0]])],
-            'south'     => [180.0, Line::fromArray([[0.0, 0.0],[0.0, -1.0]])],
-            'southwest' => [225.0, Line::fromArray([[0.0, 0.0],[-1.0, -1.0]])],
-            'west'      => [270.0, Line::fromArray([[0.0, 0.0],[-1.0, 0.0]])],
-            'northwest' => [315.0, Line::fromArray([[0.0, 0.0],[-1.0, 1.0]])],
+            'north'     => [0.0,   $this->lineDirection('north')],
+            'northeast' => [45.0,  $this->lineDirection('northeast')],
+            'east'      => [90.0,  $this->lineDirection('east')],
+            'southeast' => [135.0, $this->lineDirection('southeast')],
+            'south'     => [180.0, $this->lineDirection('south')],
+            'southwest' => [225.0, $this->lineDirection('southwest')],
+            'west'      => [270.0, $this->lineDirection('west')],
+            'northwest' => [315.0, $this->lineDirection('northwest')],
         ];
+    }
+
+    private function assertFloat(float $expected, float $result): void
+    {
+        $delta = 1.0E-9;
+        $this->assertEqualsWithDelta($expected, $result, $delta);
+    }
+
+    private function linePointingNorth(float $xTarget = 0.0, float $yTarget = 1.0): Line
+    {
+        return $this->lineDirection('north', $xTarget, $yTarget);
+    }
+
+    private function lineDirection(string $direction, float $xTarget = 0.0, float $yTarget = 0.0): Line
+    {
+        [$xDirection, $yDirection] = match ($direction) {
+            'north'     => [0.0, 1.0],
+            'northeast' => [1.0, 1.0],
+            'east'      => [1.0, 0.0],
+            'southeast' => [1.0, -1.0],
+            'south'     => [0.0, -1.0],
+            'southwest' => [-1.0, -1.0],
+            'west'      => [-1.0, 0.0],
+            'northwest' => [-1.0, 1.0],
+            default     => [0, 0],
+        };
+
+        return $this->createLine($xTarget, $yTarget, $xDirection, $yDirection);
+    }
+
+    private function createLine(float $xTarget, float $yTarget, float $xDirection, float $yDirection): Line
+    {
+        return Line::fromArray([
+            [$xTarget - $xDirection, $yTarget - $yDirection],
+            [$xTarget, $yTarget],
+        ]);
     }
 }
