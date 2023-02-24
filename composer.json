@@ -3,6 +3,7 @@
     "description": "Lossy compression for geolocation data, like maps or routes",
     "type": "library",
     "require-dev": {
+        "wgirhad/geophp": "^3.0",
         "phpunit/phpunit": "^9.5",
         "phpstan/phpstan": "^1.8",
         "squizlabs/php_codesniffer": "^3.7",
@@ -21,7 +22,7 @@
         }
     ],
     "require": {
-        "funiq/geophp": "^2.0.2",
+        "geophp/geophp": "*",
         "php": "^8.1"
     },
     "scripts": {
