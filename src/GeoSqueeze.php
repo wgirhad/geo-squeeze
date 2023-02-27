@@ -39,8 +39,8 @@ class GeoSqueeze
     protected function reducePrecision(array $points): array
     {
         return array_map(fn(Point $point) => new Point(
-            round($point->x(), $this->precision),
-            round($point->y(), $this->precision),
+            round(floatval($point->x()), $this->precision),
+            round(floatval($point->y()), $this->precision),
         ), $points);
     }
 
