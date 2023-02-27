@@ -22,7 +22,7 @@
         }
     ],
     "require": {
-        "geophp/geophp": "*",
+        "geophp/geophp": "1.0 - 4.0",
         "php": "^8.1"
     },
     "scripts": {
