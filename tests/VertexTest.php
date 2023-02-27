@@ -56,7 +56,9 @@ final class VertexTest extends TestCase
      */
     public function testSetLineB(float $turn_angle, Line $newLine): void
     {
-        list($xTarget, $yTarget) = $newLine->start->asArray();
+        $targets = $newLine->start->asArray();
+        $this->assertNotEmpty($targets);
+        list($xTarget, $yTarget) = $targets;
 
         $lineA = $this->linePointingNorth($xTarget, $yTarget);
         $lineB = $this->linePointingNorth($xTarget, $yTarget + 1.0);
